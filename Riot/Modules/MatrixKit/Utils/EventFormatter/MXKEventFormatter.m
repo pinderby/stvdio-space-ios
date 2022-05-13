@@ -1762,7 +1762,32 @@ static NSString *const kHTMLATagRegexPattern = @"<a href=\"(.*?)\">([^<]*)</a>";
     // Note: `isEditMode` fixes an issue where editing a reply would display an "In reply to" span instead of a mention.
     if (!isEditMode && (event.isReplyEvent || (!RiotSettings.shared.enableThreads && event.isInThread)))
     {
-        html = [self renderReplyTo:html withRoomState:roomState];
+        MXEvent *repliedEvent = [self->mxSession.store eventWithEventId:event.relatesTo.inReplyTo.eventId inRoom:roomState.roomId];
+        if (repliedEvent)
+        {
+            NSString *repliedEventContent;
+            NSString *eventContent;
+            MXJSONModelSetString(repliedEventContent, repliedEvent.content[kMXMessageBodyKey]);
+
+            if (event.content[kMXMessageContentKeyNewContent])
+            {
+                MXJSONModelSetString(eventContent, event.content[kMXMessageContentKeyNewContent][@"formatted_body"]);
+                if (!eventContent)
+                {
+                    MXJSONModelSetString(eventContent, event.content[kMXMessageContentKeyNewContent][kMXMessageBodyKey]);
+                }
+                html = [NSString stringWithFormat:@"<mx-reply><blockquote><a href=\"%@\">In reply to</a> <a href=\"%@\">%@</a><br>%@</blockquote></mx-reply>%@",
+                        [MXTools permalinkToEvent:repliedEvent.eventId inRoom:repliedEvent.roomId],
+                        [MXTools permalinkToUserWithUserId:repliedEvent.sender],
+                        repliedEvent.sender,
+                        repliedEventContent,
+                        eventContent];
+            }
+        }
+        else
+        {
+            html = [self renderReplyTo:html withRoomState:roomState];
+        }
     }
 
     // Apply the css style that corresponds to the event state

@@ -158,7 +158,11 @@ extension RoomDataSource {
             let parser = MXReplyEventParser()
             let replyEventParts = parser.parse(event)
 
-            let body: String = replyEventParts?.formattedBodyParts?.replyText ?? replyEventParts?.bodyParts.replyText ?? ""
+            let body: String = (event.content[kMXMessageContentKeyNewContent] as? [String: Any])?["formatted_body"] as? String
+            ?? (event.content[kMXMessageContentKeyNewContent] as? [String: Any])?[kMXMessageBodyKey] as? String
+            ?? replyEventParts?.formattedBodyParts?.replyText
+            ?? replyEventParts?.bodyParts.replyText
+            ?? ""
             let attributed = eventFormatter.renderHTMLString(body, for: event, with: self.roomState, isEditMode: true)
             if let attributed = attributed, #available(iOS 15.0, *) {
                 editableTextMessage = PillsFormatter.insertPills(in: attributed,
